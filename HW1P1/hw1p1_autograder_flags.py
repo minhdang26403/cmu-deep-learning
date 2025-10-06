@@ -3,14 +3,16 @@
 
 # flags for linear.py
 
-DEBUG_AND_GRADE_LINEAR_flag = False
+DEBUG_AND_GRADE_LINEAR_flag = True
 
 # flags for activation.py
 
 DEBUG_AND_GRADE_IDENTITY_flag = True
-DEBUG_AND_GRADE_SIGMOID_flag = False
-DEBUG_AND_GRADE_TANH_flag = False
-DEBUG_AND_GRADE_RELU_flag = False
+DEBUG_AND_GRADE_SIGMOID_flag = True
+DEBUG_AND_GRADE_TANH_flag = True
+DEBUG_AND_GRADE_RELU_flag = True
+DEBUG_AND_GRADE_GELU_flag = True
+DEBUG_AND_GRADE_SOFTMAX_flag = True
 
 # flags for mlp.py
 
