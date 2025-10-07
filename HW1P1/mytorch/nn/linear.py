@@ -24,7 +24,6 @@ class Linear:
         # Think how will self.Ones helps in the calculations and uncomment below
         self.Ones = np.ones((self.N, 1))
         Z = self.A @ self.W.T + self.Ones * self.b.T  # TODO
-        print(Z.shape)
 
         return Z
 

@@ -27,7 +27,7 @@ class BatchNorm1d:
         self.M = np.mean(Z, axis=0)  # TODO
         self.V = np.var(Z, axis=0)  # TODO
 
-        if eval == False:
+        if not eval:
             # training mode
             self.NZ = (Z - self.M) / np.sqrt(self.V + self.eps)  # TODO
             self.BZ = self.BW * self.NZ + self.Bb  # TODO
