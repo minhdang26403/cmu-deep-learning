@@ -10,10 +10,8 @@ class Identity:
 
         return self.A
 
-    def backward(self):
-        dAdZ = np.ones(self.A.shape, dtype="f")
-
-        return dAdZ
+    def backward(self, dLdA):
+        return dLdA
 
 
 class Sigmoid:

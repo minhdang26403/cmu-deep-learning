@@ -1,5 +1,5 @@
 import numpy as np
-from resampling import Downsample2d
+from resampling import *
 
 
 class Conv2d_stride1:
@@ -43,10 +43,7 @@ class Conv2d_stride1:
         batch_size, _, input_height, input_width = A.shape
         output_height = input_height - self.kernel_size + 1
         output_width = input_width - self.kernel_size + 1
-        Z = np.zeros(
-            (batch_size, self.out_channels, output_height, output_width),
-            dtype=self.A.dtype,
-        )
+        Z = np.zeros((batch_size, self.out_channels, output_height, output_width))
         for i in range(output_height):
             for j in range(output_width):
                 Z[:, :, i, j] = (
@@ -139,12 +136,11 @@ class Conv2d:
         """
 
         # Pad the input appropriately using np.pad() function
-        padding_amount = self.padding
         pad_width = (
             (0, 0),
             (0, 0),
-            (padding_amount, padding_amount),
-            (padding_amount, padding_amount),
+            (self.padding, self.padding),
+            (self.padding, self.padding),
         )
         A_padded = np.pad(A, pad_width=pad_width, mode="constant", constant_values=0)
 
@@ -171,6 +167,9 @@ class Conv2d:
         dLdA = self.conv2d_stride1.backward(dLdZ)
 
         # Unpad the gradient
-        dLdA = dLdA[:, :, self.padding : -self.padding, self.padding : -self.padding]
+        if self.padding > 0:
+            dLdA = dLdA[
+                :, :, self.padding : -self.padding, self.padding : -self.padding
+            ]
 
         return dLdA
