@@ -1,19 +1,16 @@
 # DO NOT import any additional 3rd party external libraries as they will not
 # be available to AutoLab and are not needed (or allowed)
 
-from flatten import *
-from Conv1d import *
-from linear import *
-from activation import *
-from loss import *
-import numpy as np
-import os
 import sys
 
-sys.path.append('mytorch')
+from activation import ReLU
+from Conv1d import Conv1d
+from flatten import Flatten
+
+sys.path.append("mytorch")
 
 
-class CNN_SimpleScanningMLP():
+class CNN_SimpleScanningMLP:
     def __init__(self):
         # Your code goes here -->
         # self.conv1 = ???
@@ -21,23 +18,33 @@ class CNN_SimpleScanningMLP():
         # self.conv3 = ???
         # ...
         # <---------------------
-        self.conv1 = None
-        self.conv2 = None
-        self.conv3 = None
-        self.layers = [] # TODO: Add the layers in the correct order
+
+        self.conv1 = Conv1d(in_channels=24, out_channels=8, kernel_size=8, stride=4)
+        self.conv2 = Conv1d(in_channels=8, out_channels=16, kernel_size=1, stride=1)
+        self.conv3 = Conv1d(in_channels=16, out_channels=4, kernel_size=1, stride=1)
+
+        # Add them to self.layers
+        self.layers = [
+            self.conv1,
+            ReLU(),
+            self.conv2,
+            ReLU(),
+            self.conv3,
+            Flatten(),
+        ]
 
     def init_weights(self, weights):
         # Load the weights for your CNN from the MLP Weights given
         # w1, w2, w3 contain the weights for the three layers of the MLP
-        # Load them appropriately into the CNN - 
+        # Load them appropriately into the CNN -
         #    1. For each conv layer, have a look at the shape of its weight matrix
         #    2. Look at the shapes of w1, w2 and w3
         #    3. Figure out appropriate reshape and transpose operations
 
         w1, w2, w3 = weights
-        self.conv1.conv1d_stride1.W = None
-        self.conv2.conv1d_stride1.W = None
-        self.conv3.conv1d_stride1.W = None
+        self.conv1.conv1d_stride1.W = w1.T.reshape(8, 8, 24).transpose(0, 2, 1)
+        self.conv2.conv1d_stride1.W = w2.T.reshape(16, 1, 8).transpose(0, 2, 1)
+        self.conv3.conv1d_stride1.W = w3.T.reshape(4, 1, 16).transpose(0, 2, 1)
 
     def forward(self, A):
         """
@@ -69,7 +76,7 @@ class CNN_SimpleScanningMLP():
         return dLdA
 
 
-class CNN_DistributedScanningMLP():
+class CNN_DistributedScanningMLP:
     def __init__(self):
         # Your code goes here -->
         # self.conv1 = ???
@@ -77,10 +84,17 @@ class CNN_DistributedScanningMLP():
         # self.conv3 = ???
         # ...
         # <---------------------
-        self.conv1 = None
-        self.conv2 = None
-        self.conv3 = None
-        self.layers = [] # TODO: Add the layers in the correct order
+        self.conv1 = Conv1d(in_channels=24, out_channels=2, kernel_size=2, stride=2)
+        self.conv2 = Conv1d(in_channels=2, out_channels=8, kernel_size=2, stride=2)
+        self.conv3 = Conv1d(in_channels=8, out_channels=4, kernel_size=2, stride=1)
+        self.layers = [
+            self.conv1,
+            ReLU(),
+            self.conv2,
+            ReLU(),
+            self.conv3,
+            Flatten(),
+        ]  # TODO: Add the layers in the correct order
 
     def __call__(self, A):
         # Do not modify this method
@@ -92,9 +106,9 @@ class CNN_DistributedScanningMLP():
         # Load them appropriately into the CNN
 
         w1, w2, w3 = weights
-        self.conv1.conv1d_stride1.W = None
-        self.conv2.conv1d_stride1.W = None
-        self.conv3.conv1d_stride1.W = None
+        self.conv1.conv1d_stride1.W = w1[:48, :2].T.reshape(2, 2, 24).transpose(0, 2, 1)
+        self.conv2.conv1d_stride1.W = w2[:4, :8].T.reshape(8, 2, 2).transpose(0, 2, 1)
+        self.conv3.conv1d_stride1.W = w3[:16, :4].T.reshape(4, 2, 8).transpose(0, 2, 1)
 
     def forward(self, A):
         """

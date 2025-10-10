@@ -1,27 +1,36 @@
 # DO NOT import any additional 3rd party external libraries as they will not
 # be available to AutoLab and are not needed (or allowed)​
 
-from flatten import *
-from Conv1d import *
-from linear import *
-from activation import *
-from loss import *
-import numpy as np
-import os
 import sys
 
-sys.path.append('mytorch')
+import numpy as np
+from Conv1d import Conv1d
+from flatten import Flatten
+from linear import Linear
+
+sys.path.append("mytorch")
 
 
 class CNN(object):
-
     """
     A simple convolutional neural network
     """
 
-    def __init__(self, input_width, num_input_channels, num_channels, kernel_sizes, strides,
-                 num_linear_neurons, activations, conv_weight_init_fn, bias_init_fn,
-                 linear_weight_init_fn, criterion, lr):
+    def __init__(
+        self,
+        input_width,
+        num_input_channels,
+        num_channels,
+        kernel_sizes,
+        strides,
+        num_linear_neurons,
+        activations,
+        conv_weight_init_fn,
+        bias_init_fn,
+        linear_weight_init_fn,
+        criterion,
+        lr,
+    ):
         """
         input_width           : int    : The width of the input to the first convolutional layer
         num_input_channels    : int    : Number of channels for the input layer
@@ -58,11 +67,46 @@ class CNN(object):
         # self.flatten              (Flatten)     = Flatten()
         # self.linear_layer         (Linear)      = Linear(???)
 
-        self.convolutional_layers = None    # TODO
-        self.flatten = None                 # TODO
-        self.linear_layer = None            # TODO
+        self.convolutional_layers = [
+            Conv1d(
+                in_channels=num_input_channels,
+                out_channels=num_channels[0],
+                kernel_size=kernel_sizes[0],
+                stride=strides[0],
+            ),
+            Conv1d(
+                in_channels=num_channels[0],
+                out_channels=num_channels[1],
+                kernel_size=kernel_sizes[1],
+                stride=strides[1],
+            ),
+            Conv1d(
+                in_channels=num_channels[1],
+                out_channels=num_channels[2],
+                kernel_size=kernel_sizes[2],
+                stride=strides[2],
+            ),
+        ]  # TODO
+        self.flatten = Flatten()  # TODO
+        conv1_out = (input_width - kernel_sizes[0]) / strides[0] + 1
+        conv2_out = (conv1_out - kernel_sizes[1]) / strides[1] + 1
+        conv3_out = (conv2_out - kernel_sizes[2]) / strides[2] + 1
+        self.linear_layer = Linear(
+            int(conv3_out * num_channels[2]), num_linear_neurons
+        )  # TODO
+
+        self.layers = [
+            self.convolutional_layers[0],
+            activations[0],
+            self.convolutional_layers[1],
+            activations[1],
+            self.convolutional_layers[2],
+            activations[2],
+            self.flatten,
+            self.linear_layer,
+        ]
         # <---------------------
-        
+
         # Don't change this -->
         out_features, in_features = self.linear_layer.W.shape
         if linear_weight_init_fn is not None:
@@ -80,6 +124,8 @@ class CNN(object):
         """
 
         # Your code goes here -->
+        for layer in self.layers:
+            A = layer.forward(A)
         # Iterate through each layer
         # <---------------------
 
@@ -101,6 +147,8 @@ class CNN(object):
         grad = self.criterion.backward()
 
         # Your code goes here -->
+        for layer in self.layers[::-1]:
+            grad = layer.backward(grad)
         # Iterate through each layer in reverse order
         # <---------------------
 
@@ -118,19 +166,17 @@ class CNN(object):
     def step(self):
         # Do not modify this method
         for i in range(self.nlayers):
-            self.convolutional_layers[i].conv1d_stride1.W = (self.convolutional_layers[i].conv1d_stride1.W -
-                                                             self.lr * self.convolutional_layers[i].conv1d_stride1.dLdW)
-            self.convolutional_layers[i].conv1d_stride1.b = (self.convolutional_layers[i].conv1d_stride1.b -
-                                                             self.lr * self.convolutional_layers[i].conv1d_stride1.dLdb)
+            self.convolutional_layers[i].conv1d_stride1.W = (
+                self.convolutional_layers[i].conv1d_stride1.W
+                - self.lr * self.convolutional_layers[i].conv1d_stride1.dLdW
+            )
+            self.convolutional_layers[i].conv1d_stride1.b = (
+                self.convolutional_layers[i].conv1d_stride1.b
+                - self.lr * self.convolutional_layers[i].conv1d_stride1.dLdb
+            )
 
-        self.linear_layer.W = (
-            self.linear_layer.W -
-            self.lr *
-            self.linear_layer.dLdW)
-        self.linear_layer.b = (
-            self.linear_layer.b -
-            self.lr *
-            self.linear_layer.dLdb)
+        self.linear_layer.W = self.linear_layer.W - self.lr * self.linear_layer.dLdW
+        self.linear_layer.b = self.linear_layer.b - self.lr * self.linear_layer.dLdb
 
     def train(self):
         # Do not modify this method
