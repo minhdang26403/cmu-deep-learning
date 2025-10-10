@@ -29,10 +29,11 @@ class Sigmoid:
 
         return self.A
 
-    def backward(self):
+    def backward(self, dLdA):
         dAdZ = self.A * (1 - self.A)
+        dLdZ = dLdA * dAdZ
 
-        return dAdZ
+        return dLdZ
 
 
 class Tanh:
@@ -48,9 +49,10 @@ class Tanh:
 
         return self.A
 
-    def backward(self):
+    def backward(self, dLdA):
         dAdZ = 1 - self.A**2
-        return dAdZ
+        dLdZ = dLdA * dAdZ
+        return dLdZ
 
 
 class ReLU:
@@ -66,9 +68,10 @@ class ReLU:
 
         return self.A
 
-    def backward(self):
-        dAdZ = np.where(self.A > 0, 1, 0)
-        return dAdZ
+    def backward(self, dLdA):
+        dZdA = np.where(self.A > 0, 1, 0)
+        dLdZ = dZdA * dLdA
+        return dLdZ
 
 
 class GELU:
@@ -84,12 +87,13 @@ class GELU:
 
         return self.A
 
-    def backward(self):
+    def backward(self, dLdA):
         dAdZ = 0.5 * (
             1 + scipy.special.erf(self.Z / math.sqrt(2))
         ) + self.Z / math.sqrt(2 * math.pi) * np.exp(-(self.Z**2) / 2)
+        dLdZ = dLdA * dAdZ
 
-        return dAdZ
+        return dLdZ
 
 
 class Softmax:
@@ -106,7 +110,7 @@ class Softmax:
 
         return self.A
 
-    def backward(self):
+    def backward(self, dLdA):
         N, C = self.A.shape
 
         # Initialize an empty list to store each Jacobian
@@ -125,4 +129,5 @@ class Softmax:
             J[i, :, :] = J_single
 
         # Stack the list of 2D arrays into a single 3D tensor
-        return J
+        dLdZ = dLdA * J
+        return dLdZ
