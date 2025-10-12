@@ -1,7 +1,8 @@
 import numpy as np
-from models.GRU import GRU
 from CTC.CTC import CTCLoss
-from mytorch.nn.linear import Linear  
+from models.GRU import GRU
+from mytorch.nn.linear import Linear
+
 
 class GRU_CTC:
     def __init__(self, input_size, hidden_size, num_layers, num_symbols):
@@ -12,14 +13,14 @@ class GRU_CTC:
             num_layers: Number of GRU layers.
             num_symbols: Number of output symbols (including blank, assumed index 0).
         """
-       
+
         # TODO: Initialize the GRU with input_size, hidden_size, and num_layers
-        self.gru = NotImplemented 
+        self.gru = GRU(input_size, hidden_size, num_layers)
         # TODO: Define the output size (Hint: What does GRU output per timestep?)
-        self.output_size = NotImplemented 
+        self.output_size = hidden_size
         # TODO: Initialize a linear layer that maps from output_size to num_symbols
-        self.linear = NotImplemented 
-    
+        self.linear = Linear(hidden_size, num_symbols)
+
     def forward(self, x):
         """
         Forward pass:
@@ -27,24 +28,25 @@ class GRU_CTC:
         Returns:
             probs: shape (seq_len, batch_size, num_symbols)
         """
-        self.gru_out, self.h_n = self.gru.forward(x) #(seq_len, batch_size, hidden_size)
+        self.gru_out, self.h_n = self.gru.forward(
+            x
+        )  # (seq_len, batch_size, hidden_size)
         seq_len, batch_size, _ = self.gru_out.shape
 
         # Flatten the GRU output before feeding it to the Linear Layer.
-        x_flat =  NotImplemented         
+        x_flat = self.gru_out.reshape(seq_len * batch_size, -1)
         # TODO: Pass through the Linear layer to get logits
-        self.logits_flat = NotImplemented
+        self.logits_flat = self.linear.forward(x_flat)
         # TODO: Reshape logits back to the original shape
-        self.logits = NotImplemented
-        
+        self.logits = self.logits_flat.reshape(seq_len, batch_size, -1)
+
         # Stabilized softmax:
         # Subtract the max (per example) to avoid overflow, and add a tiny epsilon in the denominator.
         max_logits = np.max(self.logits, axis=2, keepdims=True)
         exp_logits = np.exp(self.logits - max_logits)
         self.probs = exp_logits / (np.sum(exp_logits, axis=2, keepdims=True) + 1e-8)
         return self.probs
-    
-    
+
     def backward(self, dY):
         """
         Backward pass:
@@ -57,23 +59,24 @@ class GRU_CTC:
         dY_flat = dY.reshape(seq_len * batch_size, -1)
 
         # TODO: Backprop through Linear layer
-        d_gru_out_flat = NotImplemented
-        d_gru_out = d_gru_out_flat.reshape(seq_len, batch_size, -1) 
+        d_gru_out_flat = self.linear.backward(dY_flat)
+        d_gru_out = d_gru_out_flat.reshape(seq_len, batch_size, -1)
 
         # TODO: Backprop through the GRU
-        d_x = NotImplemented
+        d_x = self.gru.backward(d_gru_out)
         return d_x
+
 
 def train():
     # --- Hyperparameters ---
-    seq_len     = 15
-    batch_size  = 3
-    input_size  = 8
+    seq_len = 15
+    batch_size = 3
+    input_size = 8
     hidden_size = 16
-    num_layers  = 2
-    num_symbols = 5    
-    num_epochs  = 10
-    learning_rate = 0.001 
+    num_layers = 2
+    num_symbols = 5
+    num_epochs = 10
+    learning_rate = 0.001
 
     # Create the network and CTCLoss.
     model = GRU_CTC(input_size, hidden_size, num_layers, num_symbols)
@@ -82,7 +85,7 @@ def train():
     # --- Create dummy data ---
     # Random input tensor of shape (seq_len, batch_size, input_size)
     x = np.random.randn(seq_len, batch_size, input_size)
-    
+
     # Create random target sequences (values between 1 and num_symbols-1)
     target_sequences = []
     target_lengths = []
@@ -94,7 +97,7 @@ def train():
     max_target_len = max(target_lengths)
     targets_padded = np.zeros((batch_size, max_target_len), dtype=int)
     for i, seq in enumerate(target_sequences):
-        targets_padded[i, :len(seq)] = seq
+        targets_padded[i, : len(seq)] = seq
 
     # Assume full-length inputs.
     input_lengths = np.full((batch_size,), seq_len, dtype=int)
@@ -103,24 +106,24 @@ def train():
     # --- Training loop ---
     for epoch in range(num_epochs):
         # TODO: Perform forward pass
-        probs = NotImplemented
+        probs = model.forward(x)
 
-        #Calculate the CTCloss
-        loss = NotImplemented
+        # Calculate the CTCloss
+        loss = ctc_loss_fn(probs, targets_padded, input_lengths, target_lengths)
         print(f"Epoch {epoch}, Loss: {loss:.4f}")
-        
+
         # Compute gradients from CTCLoss.
-        dY = NotImplemented # shape: (seq_len, batch_size, num_symbols)
+        dY = ctc_loss_fn.backward()  # shape: (seq_len, batch_size, num_symbols)
 
         # TODO: Backpropagate through the network
-        
-        
+        model.backward(dY)
+
         # --- Manual parameter update (gradient descent) ---
 
         # Update parameters in the Linear layer using model.linear.dLdW and model.linear.dLdb
-        model.linear.W -= NotImplemented
-        model.linear.b -= NotImplemented
-        
+        model.linear.W -= learning_rate * model.linear.dLdW
+        model.linear.b -= learning_rate * model.linear.dLdb
+
         # Update parameters in each GRUCell.
 
         # Maybe we give them this. We could also not or implement this differently
@@ -138,5 +141,6 @@ def train():
             cell.bzh -= learning_rate * cell.dbzh
             cell.bnh -= learning_rate * cell.dbnh
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     train()
